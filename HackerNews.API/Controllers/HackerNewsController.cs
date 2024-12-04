@@ -1,6 +1,5 @@
 using HackerNews.API.Helpers;
 using HackerNews.API.HttpClientServices;
-using HackerNews.API.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HackerNews.API.Controllers;
@@ -19,13 +18,16 @@ public class HackerNewsController : ControllerBase
     }
     // GET
     [HttpGet("stories")]
-    public async Task<IActionResult> GetListOfNewStories([FromQuery] int limit = DEFAULT_LIMIT, [FromQuery] int page = 1)
+    public async Task<IActionResult> GetListOfNewStories(
+        [FromQuery] int limit = DEFAULT_LIMIT,
+        [FromQuery] int page = 1,
+        [FromQuery] string search = "")
     {
         // Validate input parameters
         limit = Math.Clamp(limit, 1, MAX_LIMIT);
         page = Math.Max(1, page);
         
-        var hackerNewsIds = await _httpClient.GetLatestStoriesAsync(limit, page);
+        var hackerNewsIds = await _httpClient.GetLatestStoriesAsync(limit, page, search);
         return Ok(ApiResponseHelper.CreateResponse("Request Successful", true, hackerNewsIds));
     }
 }

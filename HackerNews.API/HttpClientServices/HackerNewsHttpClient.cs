@@ -9,7 +9,7 @@ public class HackerNewsHttpClient
 {
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _memoryCache;
-    private readonly SemaphoreSlim _semaphore = new(1,1);
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly string cacheKey = "hackerNewsCacheKey";
     private readonly ILogger<HackerNewsHttpClient> _logger;
 
@@ -24,17 +24,24 @@ public class HackerNewsHttpClient
     }
 
     // Get latest stories
-    public async Task<PaginatedResult<Story>> GetLatestStoriesAsync(int limit, int page)
+    public async Task<PaginatedResult<Story>> GetLatestStoriesAsync(int limit, int page, string searchTerm)
     {
         // Try to get cached stories first
         if (_memoryCache.TryGetValue(cacheKey, out List<Story>? cachedStories) && cachedStories != null)
         {
-            return PaginateStories(cachedStories, limit, page);
+            if (searchTerm.Trim().Equals(string.Empty))
+            {
+                return PaginateStories(cachedStories, limit, page);
+            }
+
+            var searchResult = SearchResult(cachedStories, searchTerm);
+
+            return PaginateStories(searchResult, limit, page);
         }
 
         // Use semaphore to ensure only one thread refreshes the cache
         await _semaphore.WaitAsync();
-        try 
+        try
         {
             // Double-check locking pattern
             if (!_memoryCache.TryGetValue(cacheKey, out cachedStories))
@@ -42,9 +49,14 @@ public class HackerNewsHttpClient
                 cachedStories = await FetchAndCacheAllStoriesAsync();
             }
 
+            if (!searchTerm.Trim().Equals(string.Empty) && cachedStories != null)
+            {
+                cachedStories = SearchResult(cachedStories, searchTerm);
+            }
+
             return PaginateStories(cachedStories, limit, page);
         }
-        finally 
+        finally
         {
             _semaphore.Release();
         }
@@ -52,7 +64,7 @@ public class HackerNewsHttpClient
 
     private async Task<List<Story>> FetchAndCacheAllStoriesAsync()
     {
-        try 
+        try
         {
             // Fetch story IDs
             var request = new HttpRequestMessage(HttpMethod.Get, _httpClient.BaseAddress + $"/v0/newstories.json");
@@ -65,22 +77,22 @@ public class HackerNewsHttpClient
 
             // Fetch full story details concurrently
             var stories = new ConcurrentBag<Story>();
-            
+
             await Parallel.ForEachAsync(
-                latestStoriesId.Take(500), 
-                new ParallelOptions { MaxDegreeOfParallelism = 10 }, 
+                latestStoriesId.Take(500),
+                new ParallelOptions { MaxDegreeOfParallelism = 10 },
                 async (id, token) =>
                 {
-                    try 
+                    try
                     {
-                        var storyRequest = new HttpRequestMessage(HttpMethod.Get, 
+                        var storyRequest = new HttpRequestMessage(HttpMethod.Get,
                             _httpClient.BaseAddress + $"/v0/item/{id}.json");
                         var storyResponse = await _httpClient.SendAsync(storyRequest, token);
-                        
+
                         storyResponse.EnsureSuccessStatusCode();
                         var storyResponseJson = await storyResponse.Content.ReadAsStringAsync();
                         var story = JsonSerializer.Deserialize<Story>(storyResponseJson);
-                        
+
                         if (story != null)
                         {
                             stories.Add(story);
@@ -102,7 +114,7 @@ public class HackerNewsHttpClient
                 .SetSlidingExpiration(TimeSpan.FromMinutes(30))
                 .SetAbsoluteExpiration(TimeSpan.FromHours(2))
                 .SetPriority(CacheItemPriority.High);
-            
+
             _memoryCache.Set(cacheKey, storyList, cacheOptions);
 
             return storyList;
@@ -119,7 +131,7 @@ public class HackerNewsHttpClient
         // Calculate pagination
         int startIndex = (page - 1) * limit;
         int endIndex = Math.Min(startIndex + limit, stories.Count);
-        
+
         var paginatedStories = stories
             .Skip(startIndex)
             .Take(limit)
@@ -135,5 +147,12 @@ public class HackerNewsHttpClient
                 TotalStories = stories.Count
             }
         };
+    }
+
+    private List<Story> SearchResult(List<Story> stories, string searchTerm)
+    {
+        return stories.Where(s =>
+            s.Title.ToLower().Contains(searchTerm.ToLower()) || s.By.ToLower().Contains(searchTerm.ToLower()) ||
+            s.Type.ToLower().Contains(searchTerm.ToLower())).ToList();
     }
 }
