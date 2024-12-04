@@ -11,5 +11,5 @@ public record Story(
     [property: JsonPropertyName("time")] int Time,
     [property: JsonPropertyName("title")] string Title,
     [property: JsonPropertyName("type")] string Type,
-    [property: JsonPropertyName("url")] string Url
+    [property: JsonPropertyName("url")] string? Url
 );
