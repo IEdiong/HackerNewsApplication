@@ -11,4 +11,14 @@ public static class ServiceExtensions
                 var baseUrl = configuration["HackerNewsAPI:BaseUrl"];
                 client.BaseAddress = new Uri(baseUrl);
             });
+
+    public static void ConfigureCors(this IServiceCollection services) =>
+        services.AddCors(options =>
+        {
+            options.AddPolicy("CorsPolicy", builder =>
+                builder.WithOrigins("http://127.0.0.1:5500")
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowAnyOrigin());
+        });
 }
