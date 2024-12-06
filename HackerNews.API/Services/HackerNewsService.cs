@@ -1,3 +1,4 @@
+using HackerNews.API.HttpClientServices;
 using HackerNews.API.Interfaces;
 using HackerNews.API.Models;
 
@@ -5,13 +6,15 @@ namespace HackerNews.API.Services;
 
 public class HackerNewsService : IHackerNewsService
 {
-    public Task<IEnumerable<int[]>> GetNewStoriesIdsAsync()
+    private readonly IHackerNewsHttpClient _hackerNewsHttpClient;
+
+    public HackerNewsService(IHackerNewsHttpClient hackerNewsHttpClient)
     {
-        throw new NotImplementedException();
+        _hackerNewsHttpClient = hackerNewsHttpClient;
     }
 
-    public Task<IEnumerable<Story>> GetNewStoriesAsync(IEnumerable<int> storiesIds)
+    public async Task<PaginatedResult<Story>> GetLatestStoriesAsync(int limit, int page, string searchTerm)
     {
-        throw new NotImplementedException();
+        return await _hackerNewsHttpClient.GetLatestStoriesAsync(limit, page, searchTerm);
     }
 }

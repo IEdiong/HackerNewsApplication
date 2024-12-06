@@ -5,7 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace HackerNews.API.HttpClientServices;
 
-public class HackerNewsHttpClient
+public class HackerNewsHttpClient : IHackerNewsHttpClient
 {
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _memoryCache;
@@ -18,9 +18,10 @@ public class HackerNewsHttpClient
         IMemoryCache memoryCache,
         ILogger<HackerNewsHttpClient> logger)
     {
-        _httpClient = httpClient;
         _memoryCache = memoryCache;
         _logger = logger;
+        _httpClient = httpClient;
+        _httpClient.BaseAddress = new Uri("https://hacker-news.firebaseio.com");
     }
 
     // Get latest stories

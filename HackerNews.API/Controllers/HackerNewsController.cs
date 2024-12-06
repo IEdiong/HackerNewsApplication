@@ -1,5 +1,5 @@
 using HackerNews.API.Helpers;
-using HackerNews.API.HttpClientServices;
+using HackerNews.API.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HackerNews.API.Controllers;
@@ -8,13 +8,13 @@ namespace HackerNews.API.Controllers;
 [Route("api/hackernews")]
 public class HackerNewsController : ControllerBase
 {
-    private readonly HackerNewsHttpClient _httpClient;
+    private readonly IHackerNewsService _hackerNewsService;
     private const int DEFAULT_LIMIT = 10;
     private const int MAX_LIMIT = 50;
 
-    public HackerNewsController(HackerNewsHttpClient httpClient)
+    public HackerNewsController(IHackerNewsService hackerNewsService)
     {
-        _httpClient = httpClient;
+        _hackerNewsService = hackerNewsService;
     }
     // GET
     [HttpGet("stories")]
@@ -27,7 +27,7 @@ public class HackerNewsController : ControllerBase
         limit = Math.Clamp(limit, 1, MAX_LIMIT);
         page = Math.Max(1, page);
         
-        var hackerNewsIds = await _httpClient.GetLatestStoriesAsync(limit, page, search);
-        return Ok(ApiResponseHelper.CreateResponse("Request Successful", true, hackerNewsIds));
+        var latestStories = await _hackerNewsService.GetLatestStoriesAsync(limit, page, search);
+        return Ok(ApiResponseHelper.CreateResponse("Request Successful", true, latestStories));
     }
 }

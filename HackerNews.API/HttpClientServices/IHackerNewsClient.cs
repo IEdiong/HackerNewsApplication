@@ -1,8 +1,8 @@
 using HackerNews.API.Models;
 
-namespace HackerNews.API.Interfaces;
+namespace HackerNews.API.HttpClientServices;
 
-public interface IHackerNewsService
+public interface IHackerNewsHttpClient
 {
     Task<PaginatedResult<Story>> GetLatestStoriesAsync(int limit, int page, string searchTerm);
 }
